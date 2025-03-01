@@ -1,4 +1,14 @@
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using TodoApi.Data;
+using TodoApi.Models;
+
 var builder = WebApplication.CreateBuilder(args);
+
+using var con = new SqliteConnection("Filename=:memory:");
+con.Open();
+builder.Services.AddDbContext<TodoContext>(o => o.UseSqlite(con));
+
 
 // Add services to the container.
 
@@ -8,6 +18,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+var scope = app.Services.CreateScope();
+var db = scope.ServiceProvider.GetService<TodoContext>();
+DbInitializer.Initialize(db);
+
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -20,6 +35,19 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-app.MapControllers();
+app.UseRouting();
+
+app.UseEndpoints(endpoints =>
+{
+	endpoints.MapControllers();
+	endpoints.MapControllerRoute(
+		name: "GetTodoItem",
+		pattern: "api/todoitems/{id}",
+		defaults: new { controller = "TodoItems", action = "GetTodoItemAsync" }
+	);
+
+});
+
+//app.MapControllers();
 
 app.Run();
